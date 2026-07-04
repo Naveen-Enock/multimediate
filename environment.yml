@@ -1,0 +1,21 @@
+# Conda environment for GPD analysis scripts (correlation, engagement_analysis).
+# Create:  conda env create -f environment.yml
+# Activate: conda activate gpd
+name: gpd
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - numpy>=2.0
+  - pandas>=2.0
+  - scipy>=1.11
+  - scikit-learn>=1.4
+  - matplotlib>=3.8
+  - seaborn>=0.13
+  - tqdm
+  - pyyaml
+  - pyarrow
+  - pip
+  - pip:
+      - opensmile==2.6.0

@@ -1,0 +1,21 @@
+name: gpd-comp
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch>=2.2
+  - pytorch-cuda=12.1
+  - torchaudio
+  - numpy>=1.26
+  - scipy>=1.11
+  - pyyaml
+  - tqdm
+  - pytest
+  - scikit-learn        # test-only reference for kappa
+  - pip
+  - pip:
+      - einops
+      - wandb

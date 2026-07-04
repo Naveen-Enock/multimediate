@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Local datasets (not distributed)
+/noxi/
+/noxi-j/
+/mpii/
+/pinsoro/
+
+# Training / build artifacts (regenerable)
+/checkpoints/
+/wandb/
+comp_model/cache/
+comp_model/configs/norm_stats.npz
+
+# Submission outputs
+/submission*/

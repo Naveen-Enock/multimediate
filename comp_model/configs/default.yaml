@@ -1,0 +1,96 @@
+# comp_model default config.
+# All hyperparameters live here; CLI flags override. Logged to W&B at run start.
+
+seed: 40
+
+# ── Dataset roots (local, gitignored) ────────────────────────────────────────
+data:
+  roots:
+    noxi:    /path/to/noxi
+    noxi_j:  /path/to/noxi-j
+    mpii:    /path/to/mpii
+    pinsoro: /path/to/pinsoro
+  train_datasets: [noxi, noxi_j, pinsoro]
+  val_datasets: [noxi, noxi_j, pinsoro]
+  train_splits: [train]   # splits pooled into the training set (also fit_norm_stats)
+  norm_stats: comp_model/configs/norm_stats.npz   # written by fit_norm_stats.py
+  precomputed_dir: comp_model/cache/precomputed   # normalized 25fps fp16 feature arrays (continuous + categorical); written by precompute_features.py, raw-stream fallback if absent
+  num_workers: 6
+  prefetch_factor: 4       
+  eval_workers: 2          
+
+# ── Windowing ──────────────────────────────────────────────────────────────
+window:
+  W: 96                    # window frames  (~3.84 s @ 25 fps)
+  S: 32                    # window stride  (~1.28 s)
+  K: 64                    # prediction horizon  context=(W-K)=32 frames, predict last K frames
+
+# ── Model ──────────────────────────────────────────────────────────────────
+model:
+  d_model: 256
+  num_encoder_layers: 3
+  attention_heads: 8
+  dropout: 0.1
+  use_fusion: true           # Unified Bank modality fusion
+  ffn_mult: 4                # fusion FFN hidden = ffn_mult * d_model
+  fusion_modulation: true    # modality wise affine transformation (γ/β/α)
+  pool_value_gate: true      # sigmoid value-gate in GatedModalityPool
+  use_temporal: true         # reactive + anticipatory temporal streams (AdaLN-Zero, RoPE)
+  temporal_mode: dual        # dual = reactive+anticipatory causal streams; single = one non-causal bidirectional stream (copied to both slots)
+  use_graph: true            # parallel graph cross-attention
+  graph_partner_softmax: true # normalized per-frame partner weighting (else additive sum)
+  use_diffusion: true        # conditional diffusion transformer head (else regression fallback)
+  use_domain_film: true      # domain-metadata FiLM after modality pool + after graph cross-attn
+  head_decoder_layers: 2     # per-frame temporal-query decoder depth (PInSoRo / regression heads)
+  compile: false             # torch.compile the trunk forward in place (off → eager)
+  compile_mode: default      # torch.compile mode: default | reduce-overhead | max-autotune
+
+diffusion:
+  train_steps: 1000          # DDPM diffusion steps for the noise schedule
+  sample_steps: 20           # DDIM inference steps
+  beta_start: 1.0e-4
+  beta_end: 0.02
+  num_layers: 4              # transformer denoiser blocks (self-attn + cross-attn + FFN)
+  ccc_lambda: 1.5            # λ on the (1 − CCC(ŷ₀, y₀)) term in DiffusionHybridCCCLoss
+  horizon_decay_kappa: 0.02  # exp(−κ·Δt) weight on the continuous loss over the horizon offset Δt (0 = uniform);
+
+# ── PInSoRo categorical head ──────────────────────────────────────────────────
+pinsoro:
+  trunk_grad_scale: 0.20966689560034155      # scale the categorical head's gradient flowing into the shared trunk (1.0 = off)
+  pred_stride: 15            # CE scored on a 1 Hz subsample of the horizon 
+  sampler_alpha: 0.34532246062506555         # ClassBalancedSampler power-law exponent on 1/f_c
+  train_logit_adjust_tau_cc: 0.8847963120186833  # per-domain logit-adjustment strength, child-child
+  train_logit_adjust_tau_cr: 0.15204644490034822  # per-domain logit-adjustment strength, child-robot
+
+ensemble:
+  decay_kappa: 0.02          # w(Δt) = exp(-κ·Δt); overlapping continuous values and categorical logits both merged with this decay
+
+# ── Optimization ─────────────────────────────────────────────────────────────
+optimizer:
+  name: adam
+  lr: 1.5e-5
+lr_schedule:
+  warmup_steps: 300        # linear warmup steps, then cosine decay over the rest of the run
+  min_lr_ratio: 0.1        # cosine anneals base_lr -> min_lr_ratio*base_lr by the final step (0 = ~0)
+grad_clip_norm: 1.0
+
+batch_size:
+  train: 160                # sessions/step, global across GPUs (each expands to N nodes)
+  val: 128                 # sessions/batch, single-GPU forward-only (no grad/optimizer state -> ~2× train/GPU)
+
+train:
+  epochs: 50
+  max_steps: null          
+  amp: true
+  hist_every: 50           
+  val_every_epochs: 5    
+  save_every_epochs: 2    
+  grad_accum_steps: 1      
+  ema_decay: 0.999         
+  select_metric: null      
+
+# ── Experiment tracking (W&B is the tracker; no JSONL fallback) ──────────────
+wandb:
+  enabled: true            # activates only if WANDB_API_KEY is set
+  project: multimediate26-comp_model
+  run_name_pattern: run{run_id:03d}-{date}
