@@ -9,6 +9,8 @@ A single forward pass predicts engagement for **everyone in the frame**: a share
 runs once over the flattened `(B·N)` node axis, followed by per-node graph cross-attention and
 head decoding.
 
+Note: Works on Linux / Mac only.
+
 ## Repository layout
 
 ```
