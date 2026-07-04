@@ -53,7 +53,7 @@ pytest comp_model/tests/
 CUDA_VISIBLE_DEVICES=0,1 torchrun --standalone --nproc_per_node=2 \
     comp_model/scripts/train.py --config comp_model/configs/default.yaml
 
-Single GPU:
+# Single GPU:
 CUDA_VISIBLE_DEVICES=0 python comp_model/scripts/train.py --config comp_model/configs/default.yaml
 
 # 4. validate
