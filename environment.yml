@@ -1,0 +1,17 @@
+# CPU environment for pinsoro_model.
+# Create:  conda env create -f environment.yml
+# Activate: conda activate gpd
+name: gpd
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - numpy>=2.0
+  - scipy>=1.11
+  - scikit-learn>=1.4
+  - xgboost>=2.0
+  - pyyaml
+  - pip
+  - pip:
+      - wandb   # optional run logging
